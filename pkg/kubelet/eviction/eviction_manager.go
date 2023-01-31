@@ -233,6 +233,7 @@ func (m *managerImpl) IsUnderPIDPressure() bool {
 
 // synchronize is the main control loop that enforces eviction thresholds.
 // Returns the pod that was killed, or nil if no pod was killed.
+// This is the loop responsible for evictions, it is called periodically or when memory notifier fires
 func (m *managerImpl) synchronize(diskInfoProvider DiskInfoProvider, podFunc ActivePodsFunc) []*v1.Pod {
 	ctx := context.Background()
 	// if we have nothing to do, just return
@@ -348,6 +349,7 @@ func (m *managerImpl) synchronize(diskInfoProvider DiskInfoProvider, podFunc Act
 	m.recorder.Eventf(m.nodeRef, v1.EventTypeWarning, "EvictionThresholdMet", "Attempting to reclaim %s", resourceToReclaim)
 
 	// check if there are node-level resources we can reclaim to reduce pressure before evicting end-user pods.
+
 	if m.reclaimNodeLevelResources(ctx, thresholdToReclaim.Signal, resourceToReclaim) {
 		klog.InfoS("Eviction manager: able to reduce resource pressure without evicting pods.", "resourceName", resourceToReclaim)
 		return nil
@@ -385,6 +387,7 @@ func (m *managerImpl) synchronize(diskInfoProvider DiskInfoProvider, podFunc Act
 	for i := range activePods {
 		pod := activePods[i]
 		gracePeriodOverride := int64(0)
+		// So max grace period is used only when we dont use hard eviction and specified
 		if !isHardEvictionThreshold(thresholdToReclaim) {
 			gracePeriodOverride = m.config.MaxPodGracePeriodSeconds
 		}
@@ -569,6 +572,7 @@ func (m *managerImpl) containerEphemeralStorageLimitEviction(podStats statsapi.P
 	return false
 }
 
+// eviction
 func (m *managerImpl) evictPod(pod *v1.Pod, gracePeriodOverride int64, evictMsg string, annotations map[string]string, condition *v1.PodCondition) bool {
 	// If the pod is marked as critical and static, and support for critical pod annotations is enabled,
 	// do not evict such pods. Static pods are not re-admitted after evictions.

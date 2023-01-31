@@ -48,6 +48,7 @@ var _ ThresholdNotifier = &memoryThresholdNotifier{}
 
 // NewMemoryThresholdNotifier creates a ThresholdNotifier which is designed to respond to the given threshold.
 // UpdateThreshold must be called once before the threshold will be active.
+// This is memory notifier
 func NewMemoryThresholdNotifier(threshold evictionapi.Threshold, cgroupRoot string, factory NotifierFactory, handler func(string)) (ThresholdNotifier, error) {
 	cgroups, err := cm.GetCgroupSubsystems()
 	if err != nil {
@@ -73,6 +74,7 @@ func NewMemoryThresholdNotifier(threshold evictionapi.Threshold, cgroupRoot stri
 func (m *memoryThresholdNotifier) Start() {
 	klog.InfoS("Eviction manager: created memoryThresholdNotifier", "notifier", m.Description())
 	for range m.events {
+		// Handler is the sync function
 		m.handler(fmt.Sprintf("eviction manager: %s crossed", m.Description()))
 	}
 }
